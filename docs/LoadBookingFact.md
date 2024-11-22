@@ -36,4 +36,4 @@ This activity ensures that the aggregated data in the **BookingCustomerAggregati
 
 ### **Pipeline Configuration**
 
-The configuration for this pipeline is located in the **[LoadBookingFact.json](./pipelines/LoadBookingFact.json)**.
+The configuration for this pipeline is located in the **[LoadBookingFact.json](../pipelines/LoadBookingFact.json)**.
