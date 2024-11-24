@@ -1,15 +1,13 @@
 # AirBnB CDC Ingestion Pipeline
 
-This project implements a near real-time data ingestion and transformation pipeline for AirBnB using Azure Data Factory, Synapse Analytics, CosmosDB, and other Azure technologies. It ensures efficient data processing and automated updates to maintain an up-to-date data warehouse.
-
-![AirBnB CDC Ingestion Pipeline](./assets/images/airbnb_cdc_pipeline.png)
+This project implements a near real-time data ingestion and transformation pipeline for AirBnB using **Azure Data Factory (ADF)**, **Synapse Analytics**, **CosmosDB**, and other Azure technologies. It ensures efficient data processing and automated updates to maintain an up-to-date data warehouse.
 
 ## **Tech Stack**
 
 - **Azure Data Factory (ADF)**: Orchestration of pipelines for data movement and transformations.
 - **Azure Data Lake Storage (ADLS)**: Storage for raw and intermediate data.
 - **Azure Synapse Analytics**: Data warehouse for analytical queries.
-- **CosmosDB**: Source of change data for Bookings events.
+- **CosmosDB**: Source of change data for booking events.
 - **Python**: Custom data generation scripts.
 - **SQL**: Database and transformation logic.
 
@@ -18,40 +16,80 @@ This project implements a near real-time data ingestion and transformation pipel
 ## **Pipeline Features**
 
 1. **Hourly SCD-1 Updates**:
-   - Reads customer data from ADLS hourly.
-   - Performs Slowly Changing Dimension Type 1 (SCD-1) updates on the `customer_dim` table in Synapse Analytics.
-
+   - Reads customer data from **ADLS** every hour.
+   - Performs **Slowly Changing Dimension Type 1 (SCD-1)** updates on the `customer_dim` table in **Synapse Analytics**, ensuring that the customer data is always up to date.
+   
 2. **Change Data Capture (CDC)**:
-   - Captures incremental booking events from CosmosDB using change feeds.
-   - Processes events in Azure Data Factory and upserts transformed data into Synapse.
-
+   - Captures incremental booking events from **CosmosDB** using **change feeds**.
+   - Processes these events in **Azure Data Factory (ADF)**, performs necessary transformations, and upserts the resulting data into **Synapse**.
+   
 3. **Automated Workflows**:
-   - Configured triggers and dependencies in ADF to enable seamless end-to-end automation.
+   - Configures triggers and dependencies in ADF to automate the entire process, ensuring seamless and continuous data flow.
+
+---
 
 ## **Pipeline Configuration**
 
 ### **1. AirBnBCDCPipeline** (Triggering Both Pipelines)
 
-This pipeline triggers the **LoadBookingFact Pipeline** and the **LoadCustomerDim Pipeline** in sequence. It ensures that the customer data and booking data are processed and loaded correctly into the target tables.
+The **AirBnBCDCPipeline** orchestrates the execution of both the **LoadBookingFact Pipeline** and the **LoadCustomerDim Pipeline**. This pipeline ensures that customer and booking data are processed and loaded correctly into their respective target tables.
 
-The JSON configuration for this pipeline is found in the **[AirBnBCDCPipeline](./pipelines/AirBnBCDCPipeline.json)**.
+![AirBnB CDC Ingestion Pipeline](./assets/images/airbnb_cdc_pipeline.png)
+
+The **AirBnBCDCPipeline** is responsible for:
+- Triggering the **LoadCustomerDim Pipeline** to ensure customer data is up-to-date.
+- Triggering the **LoadBookingFact Pipeline** to update booking information.
+
+The JSON configuration for this pipeline is available in the **[AirBnBCDCPipeline.json](./pipelines/AirBnBCDCPipeline.json)**.
+
+---
 
 ### **2. LoadCustomerDim Pipeline** (CDC for Customer Data)
 
-This pipeline performs a **CDC** operation to update customer records in the **Customer Dimension Table**. It uses change data from the source and applies necessary transformations before inserting/updating the customer data in **Synapse SQL Pool**.
+The **LoadCustomerDim Pipeline** is responsible for capturing **Change Data Capture (CDC)** events for customer data. This pipeline reads raw customer data from **ADLS**, performs necessary transformations, and upserts the customer records into the **Customer Dimension Table** in **Synapse SQL Pool**.
 
 ![LoadCustomerDim](./assets/images/load_customer_dim_pipeline.png)
 
-The pipeline configuration can be found in the **[LoadCustomerDim Pipeline](./docs/LoadCustomerDim.md)**.
+#### Key Pipeline Activities:
+- **Get Metadata**: Retrieves metadata for each file in the source folder.
+- **ForEach Loop**: Iterates over each file and processes it:
+  - **Copy File to Synapse**: Moves customer data into the **Synapse SQL Pool** using an **Upsert** operation based on `customer_id`.
+  - **Move File to Archive**: Archives the raw customer data files after successful ingestion.
+  - **Delete Raw Data File**: Removes the raw files from the source once they are processed.
+
+For more detailed configuration and steps of the **LoadCustomerDim Pipeline**, refer to **[LoadCustomerDim](./docs/LoadCustomerDim.md)**.
+
+---
 
 ### **3. LoadBookingFact Pipeline** (With Data Flow Activity)
 
-This pipeline includes a **Data Flow Activity** that performs several transformations on booking data. It uses data from **CosmosDB** and **Synapse SQL Pool** to enrich and update the **Booking Fact Table** in **Azure Synapse**.
+The **LoadBookingFact Pipeline** performs data transformation on booking data using **Azure Data Factory Data Flow**. This data flow includes multiple transformations and enrichment steps before upserting the booking data into the **Booking Fact Table** in **Azure Synapse**.
 
 ![LoadBookingFact](./assets/images/load_booking_fact_pipeline.png)
 
-The configuration can be found in the **[LoadBookingFact Pipeline](./docs/LoadBookingFact.md)**.
+#### Key Pipeline Activities:
+- **Data Flow Activity**:
+  - **Data Quality Check**: Validates that the `check_out_date` is later than the `check_in_date`.
+  - **Derived Column**: Calculates additional fields like `stay_duration`, `booking_year`, `booking_month`, and `full_address`.
+  - **Join with Synapse**: Compares incoming data with existing data in Synapse to identify new and updated bookings.
+  - **Alter Row Policies**: Determines if a row should be inserted or updated based on the existence of `booking_id`.
+  - **Final Columns**: Ensures the correct set of columns is written to the target table in Synapse.
+
+![BookingFactDataflow](./assets/images/booking_data_dataflow.png)
+
+- **Stored Procedure Activity**:
+  After the transformation, the **SPAggregateData** activity calls the stored procedure **[BookingAggregation](../sql/BookingAggregation.sql)** to aggregate booking data by customer country and update the **BookingCustomerAggregation** table.
+
+For detailed configuration and steps of the **LoadBookingFact Pipeline**, refer to **[LoadBookingFact](./docs/LoadBookingFact.md)**.
+
+---
 
 ## **Conclusion**
 
-This **Airbnb CDC Ingestion Pipeline** provides a comprehensive solution for processing and transforming booking and customer data, ensuring that it is ingested into **Azure Synapse SQL Pool** for further analytics and reporting. The **AirBnBCDCPipeline** coordinates the execution of the other pipelines, while the **LoadBookingFact Pipeline** includes a data flow for detailed transformation logic.
+The **AirBnB CDC Ingestion Pipeline** is designed to process and transform both booking and customer data, ensuring that they are ingested and continuously updated in **Azure Synapse SQL Pool** for further analytics and reporting. 
+
+- The **AirBnBCDCPipeline** orchestrates the execution of **LoadCustomerDim** and **LoadBookingFact** pipelines.
+- **LoadCustomerDim** pipeline ensures customer data is updated with CDC events.
+- **LoadBookingFact** pipeline performs complex data transformations and aggregates booking data, ensuring the **Booking Fact Table** is always current.
+
+With this pipeline architecture, **AirBnB** can efficiently ingest and process data, keeping its data warehouse in sync with real-time changes.

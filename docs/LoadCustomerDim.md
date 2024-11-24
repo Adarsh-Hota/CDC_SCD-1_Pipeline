@@ -1,24 +1,63 @@
 # LoadCustomerDim Pipeline (CDC for Customer Data)
 
-The **LoadCustomerDim** pipeline performs Change Data Capture (CDC) on customer data. It reads customer data from **Azure Data Lake Storage (ADLS)** and applies transformations before loading it into the **Customer Dimension Table** in **Azure Synapse**.
+The **LoadCustomerDim** pipeline implements Change Data Capture (CDC) to process customer data. It retrieves raw customer files from **Azure Data Lake Storage (ADLS)**, applies transformations, and updates the **airbnb.customer_dim** in **Azure Synapse Analytics**. The pipeline also manages raw data file archiving and cleanup to maintain an organized data lake.
 
 ![LoadCustomerDim](../assets/images/load_customer_dim_pipeline.png)
 
-## **Pipeline Configuration**
+---
 
-### **Activity 1: Get MetadataOfEachFileInCustomerRawDataContainer**
+## **Pipeline Activities**
 
-- Retrieves metadata for each file in the customer raw data container.
+### **1. Get Metadata of Files**
 
-### **Activity 2: ForEachFileInCustomerRawContainer**
+**Activity Name:** `Get MetadataOfEachFileInCustomerRawDataContainer`
 
-- Iterates through each file in the raw data container and performs the following steps:
-    1. **CopyFileDataToSynapseSQLPool**: Copies the raw customer data from the source (DelimitedText format) to the **SynapseSQLPoolCustomerDimTable** in Synapse using an **Upsert** operation based on the `customer_id` key.
-    2. **CopyFileDataToArchiveContainer**: Archives the raw customer data files to a separate storage container after they have been successfully loaded into Synapse.
-    3. **DeleteRawDataFile**: Deletes the raw customer data files from the source after they have been archived.
+- Retrieves metadata for each file in the **customer_raw_data** folder on ADLS.
+- This metadata is used to identify the files to be processed in the subsequent activity.
 
-You can find the configuration of this pipeline in the file [LoadCustomerDimDataToSynapse.json](../pipelines/LoadCustomerDimDataToSynapse.json).
+---
+
+### **2. Process Each File**
+
+**Activity Name:** `ForEachFileInCustomerRawContainer`
+
+![AirBnB Storage Container Folders](../assets/images/airbnb_storage_container.png)
+
+This activity iterates over each raw customer file identified in the previous step and performs the following sub-steps:
+
+#### **Step 1: Copy File Data to Synapse SQL Pool**
+
+- **Purpose:** Transfers raw customer data to the **airbnb.customer_dim** table in **Azure Synapse Analytics**.
+- **Method:** Performs an **Upsert** operation using the `customer_id` as the primary key.
+- **Format:** Source files are in DelimitedText format.
+
+#### **Step 2: Archive Processed Files**
+
+- **Purpose:** Moves successfully processed files from the **customer_raw_data** folder to the **customer_archive** folder.
+- **Benefit:** Ensures raw files are preserved for future reference while maintaining a clean source folder.
+
+#### **Step 3: Delete Raw Files**
+
+- **Purpose:** Deletes raw files from the **customer_raw_data** folder after successful archiving.
+- **Benefit:** Prevents duplicate processing and optimizes storage space in the data lake.
+
+---
+
+## **Pipeline Configuration File**
+
+You can find the JSON configuration file for this pipeline here:  
+[LoadCustomerDimDataToSynapse.json](../pipelines/LoadCustomerDimDataToSynapse.json)
+
+---
+
+## **Key Benefits**
+
+- **Automated Data Updates:** Ensures customer data in Synapse Analytics remains accurate and up-to-date.
+- **Data Organization:** Implements a systematic process to archive and clean up raw data files.
+- **Scalability:** Designed to handle large datasets with minimal manual intervention.
+
+---
 
 ## **Conclusion**
 
-The **LoadCustomerDim** pipeline ensures that customer data is accurately updated in the customer dimension table and provides mechanisms to manage raw data files for future reference.
+The **LoadCustomerDim Pipeline** is a critical component of the data pipeline, streamlining customer data ingestion and transformation. It ensures that customer data is reliably processed and stored in **Azure Synapse Analytics**, while also maintaining data lake hygiene.
