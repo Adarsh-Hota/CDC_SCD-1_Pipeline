@@ -1,6 +1,12 @@
 # AirBnB CDC Ingestion Pipeline
 
-This project implements a near real-time data ingestion and transformation pipeline for AirBnB using **Azure Data Factory (ADF)**, **Synapse Analytics**, **CosmosDB**, and other Azure technologies. It ensures efficient data processing and automated updates to maintain an up-to-date data warehouse.
+This project implements a data ingestion and transformation pipeline for AirBnB using **Azure Data Factory (ADF)**, **Synapse Analytics**, **CosmosDB**, and other Azure technologies. It ensures efficient data processing and automated updates to maintain an up-to-date data warehouse.
+
+Below is the architecture diagram showcasing how data flows through the different components:
+
+![AirBnB CDC Pipeline Architecture](./assets/images/cdc_pipeline_architecture.png)
+
+---
 
 ## **Tech Stack**
 
@@ -9,7 +15,7 @@ This project implements a near real-time data ingestion and transformation pipel
 - **Azure Synapse Analytics**: Data warehouse for analytical queries.
 - **CosmosDB**: Source of change data for booking events.
 - **Python**: Custom data generation scripts.
-- **SQL**: Database and transformation logic.
+- **T-SQL**: Database and transformation logic.
 
 ---
 
@@ -18,11 +24,11 @@ This project implements a near real-time data ingestion and transformation pipel
 1. **Hourly SCD-1 Updates**:
    - Reads customer data from **ADLS** every hour.
    - Performs **Slowly Changing Dimension Type 1 (SCD-1)** updates on the `customer_dim` table in **Synapse Analytics**, ensuring that the customer data is always up to date.
-   
+
 2. **Change Data Capture (CDC)**:
    - Captures incremental booking events from **CosmosDB** using **change feeds**.
    - Processes these events in **Azure Data Factory (ADF)**, performs necessary transformations, and upserts the resulting data into **Synapse**.
-   
+
 3. **Automated Workflows**:
    - Configures triggers and dependencies in ADF to automate the entire process, ensuring seamless and continuous data flow.
 
@@ -37,6 +43,7 @@ The **AirBnBCDCPipeline** orchestrates the execution of both the **LoadBookingFa
 ![AirBnB CDC Ingestion Pipeline](./assets/images/airbnb_cdc_pipeline.png)
 
 The **AirBnBCDCPipeline** is responsible for:
+
 - Triggering the **LoadCustomerDim Pipeline** to ensure customer data is up-to-date.
 - Triggering the **LoadBookingFact Pipeline** to update booking information.
 
@@ -50,7 +57,8 @@ The **LoadCustomerDim Pipeline** is responsible for capturing **Change Data Capt
 
 ![LoadCustomerDim](./assets/images/load_customer_dim_pipeline.png)
 
-#### Key Pipeline Activities:
+#### Key Pipeline Activities
+
 - **Get Metadata**: Retrieves metadata for each file in the source folder.
 - **ForEach Loop**: Iterates over each file and processes it:
   - **Copy File to Synapse**: Moves customer data into the **Synapse SQL Pool** using an **Upsert** operation based on `customer_id`.
@@ -67,7 +75,8 @@ The **LoadBookingFact Pipeline** performs data transformation on booking data us
 
 ![LoadBookingFact](./assets/images/load_booking_fact_pipeline.png)
 
-#### Key Pipeline Activities:
+#### Key Pipeline Activities
+
 - **Data Flow Activity**:
   - **Data Quality Check**: Validates that the `check_out_date` is later than the `check_in_date`.
   - **Derived Column**: Calculates additional fields like `stay_duration`, `booking_year`, `booking_month`, and `full_address`.
@@ -86,7 +95,7 @@ For detailed configuration and steps of the **LoadBookingFact Pipeline**, refer 
 
 ## **Conclusion**
 
-The **AirBnB CDC Ingestion Pipeline** is designed to process and transform both booking and customer data, ensuring that they are ingested and continuously updated in **Azure Synapse SQL Pool** for further analytics and reporting. 
+The **AirBnB CDC Ingestion Pipeline** is designed to process and transform both booking and customer data, ensuring that they are ingested and continuously updated in **Azure Synapse SQL Pool** for further analytics and reporting.
 
 - The **AirBnBCDCPipeline** orchestrates the execution of **LoadCustomerDim** and **LoadBookingFact** pipelines.
 - **LoadCustomerDim** pipeline ensures customer data is updated with CDC events.
