@@ -1,1 +1,75 @@
+# Project-specific files
 /scripts/data_generation/config.yaml
+
+# Virtual environment
+airbnb_venv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Generic virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+.ENV/
+pip-wheel-metadata/
+*.virtualenv
+
+# IDE-specific settings
+.idea/  # PyCharm
+.vscode/  # VS Code
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store  # macOS
+Thumbs.db  # Windows
+ehthumbs.db  # Windows
+Desktop.ini  # Windows
+
+# Linting tools and caches
+.mypy_cache/
+.pyre/
+.pytype/
+coverage/
+*.cover
+.hypothesis/
+*.hypothesis
+.nox/
+.cache/
+pytest_cache/
+.tox/
