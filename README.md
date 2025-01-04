@@ -8,6 +8,29 @@ Below is the architecture diagram showcasing how data flows through the differen
 
 ---
 
+## Table of Contents
+
+- [AirBnB CDC Ingestion Pipeline](#airbnb-cdc-ingestion-pipeline)
+  - [Table of Contents](#table-of-contents)
+  - [**Tech Stack**](#tech-stack)
+  - [SQL Files for Table Creation](#sql-files-for-table-creation)
+  - [**Pipeline Features**](#pipeline-features)
+  - [**LoadCustomerDim Pipeline**](#loadcustomerdim-pipeline)
+    - [**Pipeline Activities**](#pipeline-activities)
+      - [**1. Get Metadata of Files**](#1-get-metadata-of-files)
+      - [**2. Process Each File**](#2-process-each-file)
+  - [**Booking\_Dim\_Fact\_Transformation Pipeline**](#booking_dim_fact_transformation-pipeline)
+    - [Pipeline Activities](#pipeline-activities-1)
+      - [1. Data Flow Activity (ETL\_BookingDimData)](#1-data-flow-activity-etl_bookingdimdata)
+    - [Key Data Flow Components](#key-data-flow-components)
+      - [**2. Stored Procedure Activity** (AggregateBookingFactData)](#2-stored-procedure-activity-aggregatebookingfactdata)
+        - [**Stored Procedure Execution**](#stored-procedure-execution)
+        - [**Stored Procedure Logic**](#stored-procedure-logic)
+  - [Outputs](#outputs)
+  - [**Conclusion**](#conclusion)
+
+---
+
 ## **Tech Stack**
 
 - **Azure Data Factory (ADF)**: Orchestration of pipelines for data movement and transformations.
