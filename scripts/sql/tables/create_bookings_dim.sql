@@ -1,4 +1,4 @@
-CREATE TABLE airbnb.bookings_fact (
+CREATE TABLE airbnb.bookings_dim (
     booking_id NVARCHAR(100),
     property_id NVARCHAR(100),
     customer_id INT,
@@ -14,7 +14,7 @@ CREATE TABLE airbnb.bookings_fact (
     stay_duration BIGINT,
     booking_year INT,
     booking_month INT,
-    timestamp DATETIME
+    time_stamp DATETIME
 );
 
-SELECT * FROM airbnb.bookings_fact;
+SELECT * FROM airbnb.bookings_dim;
