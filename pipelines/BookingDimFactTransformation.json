@@ -24,7 +24,7 @@
                             "referenceName": "AzureDataLakeStorage1",
                             "type": "LinkedServiceReference"
                         },
-                        "folderPath": "airbnb/dataflow_staging_log"
+                        "folderPath": "airbnb/dataflow_staging_log" 
                     },
                     "compute": {
                         "coreCount": 8,
@@ -35,7 +35,7 @@
                         "firstRowOnly": true
                     },
                     "continuationSettings": {
-                        "customizedCheckpointKey": "d631a684-7e8b-4aed-8444-e5b3c9b7d2fc"
+                        "customizedCheckpointKey": "[REDACTED]"
                     }
                 }
             },
