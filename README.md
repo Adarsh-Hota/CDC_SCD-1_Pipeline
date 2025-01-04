@@ -13,13 +13,30 @@ Below is the architecture diagram showcasing how data flows through the differen
 - **Azure Data Factory (ADF)**: Orchestration of pipelines for data movement and transformations.
 - **Azure Data Lake Storage (ADLS)**: Storage for raw and intermediate data.
 - **Azure Synapse Analytics**: Data warehouse for analytical queries.
-- **CosmosDB**: Source of change data for booking events.
+- **Azure Cosmos DB for NoSQL**: Source of change data for booking events.
 - **Python**: Custom data generation scripts.
 - **T-SQL**: Database and transformation logic.
 
 ---
 
+## SQL Files for Table Creation
+
+The SQL files for creating the tables in the **Synapse SQL Pool** can be found in the following locations:
+
+1. **Customer Dimension Table**:
+    - [customer_dim.sql](./scripts/sql/tables/create_customer_dim.sql)
+
+2. **Bookings Dimension Table**:
+    - [bookings_dim.sql](./scripts/sql/tables/create_bookings_dim.sql)
+
+3. **Booking Customer Aggregation Fact Table**:
+    - [booking_customer_aggregation_fact.sql](./scripts/sql/tables/create_booking_customer_aggregation_fact.sql)
+
+---
+
 ## **Pipeline Features**
+
+![AirBnB CDC Pipeline](./assets/images/airbnb_cdc_pipeline.png)
 
 1. **Hourly SCD-1 Updates**:
    - Reads customer data from **ADLS** every hour.
@@ -34,15 +51,24 @@ Below is the architecture diagram showcasing how data flows through the differen
 
 ---
 
-## **LoadCustomerDim Pipeline (CDC for Customer Data)**
+**AirBnB CDC Pipeline Configuration File**
+
+You can find the JSON configuration file for this pipeline here:  
+[AirBnBCDCPipeline.json](./pipelines/AirBnBCDCPipeline.json)
+
+---
+
+## **LoadCustomerDim Pipeline**
 
 The **LoadCustomerDim** pipeline implements Change Data Capture (CDC) to process customer data. It retrieves raw customer files from **Azure Data Lake Storage (ADLS)**, applies transformations, and updates the **airbnb.customer_dim** in **Azure Synapse Analytics**. The pipeline also manages raw data file archiving and cleanup to maintain an organized data lake.
 
-![LoadCustomerDim](./assets/images/load_customer_dim_pipeline.png)
+![LoadCustomerDimPipeline](./assets/images/load_customer_data_pipeline.png)
 
 ---
 
 ### **Pipeline Activities**
+
+![LoadCustomerDimPipeline](./assets/images/load_customer_dim_data_all_activities.png)
 
 #### **1. Get Metadata of Files**
 
@@ -50,6 +76,7 @@ The **LoadCustomerDim** pipeline implements Change Data Capture (CDC) to process
 
 - Retrieves metadata for each file in the **customer_raw_data** folder on ADLS.
 - This metadata is used to identify the files to be processed in the subsequent activity.
+- All the input CSV files are uploaded in the datasets folder here - [Customer Data](./datasets/customer_data)
 
 ---
 
@@ -76,67 +103,138 @@ This activity iterates over each raw customer file identified in the previous st
 
 ---
 
-#### **Pipeline Configuration File**
+**LoadCustomerDim Pipeline Configuration File**
 
 You can find the JSON configuration file for this pipeline here:  
-[LoadCustomerDimDataToSynapse.json](./pipelines/LoadCustomerDimDataToSynapse.json)
+[LoadCustomerDimData.json](./pipelines/LoadCustomerDimData.json)
 
 ---
 
-## **LoadBookingFact Pipeline**
+## **Booking_Dim_Fact_Transformation Pipeline**
 
-The **LoadBookingFact** pipeline performs several data transformations to update the **airbnb.bookings_fact** table in **Azure Synapse**. It uses data from **CosmosDB** and **Synapse SQL Pool** for enriching and updating booking data.
+The **Booking_Dim_Fact_Transformation** pipeline performs several data transformations to update the **airbnb.bookings_dim** table in **Azure Synapse**. It uses data from **CosmosDB** and **Synapse SQL Pool** for enriching and updating booking data.
 
-![LoadBookingFact](./assets/images/load_booking_fact_pipeline.png)
-
----
-
-### **Pipeline Activities**
-
-#### **1. Data Flow Activity** (DatasetBookingFactTransformation)
-
-This activity uses **Azure Data Factory Data Flow** to transform the raw booking data. It performs several transformations and enrichment on the data before it is written to the **airbnb.bookings_fact** table in **Azure Synapse**.
-
-![BookingFactDataflow](./assets/images/booking_data_dataflow.png)
-
-##### **Transformations**
-
-1. **Data Quality Check**: Ensures that `check_out_date` is later than `check_in_date`.  
-2. **Derived Column**: Calculates `stay_duration`, extracts `booking_year`, `booking_month`, and forms a `full_address`.  
-3. **Join with Synapse**: Performs a lookup between incoming data and existing records in Synapse to identify new or updated bookings.  
-4. **Alter Row Policies**: Determines whether to insert or update a row based on whether `booking_id` already exists in the **airbnb.bookings_fact** table.  
-5. **Cast Columns**: Ensures that the data types match the target schema in the **airbnb.bookings_fact** table in **Synapse SQL Pool**.  
-6. **Final Columns**: Selects the final set of columns to be written to the **airbnb.bookings_fact** table in **Synapse SQL Pool**.
+![BookingsDimFactTransformationPipeline](./assets/images/bookings_dim_fact_transformation_pipeline.png)
 
 ---
 
-#### **2. Stored Procedure Activity** (SPAggregateData)
+### Pipeline Activities
 
-After the data flow activity completes successfully, the **SPAggregateData** activity calls a stored procedure to aggregate the transformed booking data. This stored procedure updates the **airbnb.BookingCustomerAggregation** table, which contains aggregated data at the customer level.
+#### 1. Data Flow Activity (ETL_BookingDimData)
+
+This activity uses **Azure Data Factory Data Flow** to transform the raw booking data. It performs several transformations and enrichment on the data before it is written to the **airbnb.bookings_dim** table in **Azure Synapse**.
+
+![BookingDimDataflow](./assets/images/booking_data_dataflow.png)
+
+This Mapping Data Flow processes the booking records from **Azure Cosmos DB** and writes the transformed data to the **Bookings Dimension Table** in **Azure Synapse SQL Pool**.
+
+### Key Data Flow Components
+
+1. **Sources**:
+    - **CosmosDBBookingDataset**: A dataset representing the source of the booking data in **Cosmos DB**.
+
+    ![CosmoDBBookingData](./assets/images/cosmodb_mock_data_in_azure_portal.png)
+    - The Python script generates booking data for CosmosDB, simulating real-time insertion with a delay between each record. The script sets up the CosmosDB client, creating the database and container, generating data using Faker, and inserting each booking record. Reference to the script file - [cosmodb_generate_mock_data.py](./scripts/data_generation/cosmodb_generate_mock_data.py)
+
+    ![CosmoDBPythonGenerateBookingData](./assets/images/generate_cosmodb_mock_data.png)
+    - **SynapseSQLPoolBookingsDimTable**: The dataset representing the destination table in **Azure Synapse SQL Pool**, where the transformed data is written.
+
+2. **Transformations**
+
+   ![ETL_BookingDimDataDataflowRun](./assets/images/dataflow_run.png)
+   - **DataQualityCheck**: 
+      - Validates the incoming data and splits records into `BadRecords` and `AcceptedRecords` based on whether the `check_out_date` is later than the `check_in_date`
+
+   - **DerivedColumn**:
+      - Creates new columns for the records such as:
+          - **stay_duration**: Calculated as the difference between `check_out_date` and `check_in_date`.
+          - **booking_year** and **booking_month**: Extracted from the `booking_date`.
+          - **full_address**: A concatenation of the `city` and `country`.
+          - Other necessary fields like `booking_id`, `amount`, `currency`, etc.
+
+   - **JoinWithSynapse**:
+       - Performs a lookup to join incoming records with existing data in the **Synapse bookings_dim Table** based on the `booking_id`. This is to identify new or updated records.
+
+   - **SetInsertAndUpdateAlterRowPolicies**:
+      - Determines whether the record should be inserted or updated based on the existence of `booking_id` in the **Synapse Booking Dim Table**.
+
+   - **CastColumns**:
+      - Casts the data to the appropriate types for the destination table in Synapse.
+
+   - **SpecificColumns**:
+      - Filters out unnecessary columns, ensuring that only required columns are passed along for further processing.
+
+   - **FinalColumns**:
+      - Finalizes the columns to match the destination schema and handles the data before it is written to the Synapse SQL pool.
+
+3. **Sinks**:
+
+- **SinkSynapseBookingDimTable**: This is the final sink where processed booking data is inserted into the **Synapse SQL Pool** table.
+
+  The JSON configuration file for this dataflow can be found here:  
+[ETL_BookingDimData.json](./dataflows/ETL_BookingDimData.json)
+
+---
+
+#### **2. Stored Procedure Activity** (AggregateBookingFactData)
+
+After the data flow activity completes successfully, the **AggregateBookingFactData** activity calls a stored procedure to aggregate the transformed booking data. This stored procedure updates the **airbnb.booking_customer_aggregation_fact** table, which contains aggregated data at the customer level.
 
 ##### **Stored Procedure Execution**
 
-- **Stored Procedure Name**: `[airbnb].[BookingAggregation]`  
+- **Stored Procedure Name**: `[airbnb].[sp_aggregate_booking_data]`  
 - **Linked Service**: Azure Synapse Analytics  
 - **Dependency**: Depends on the successful completion of the previous data flow activity.  
 - **Timeout and Retry**: Timeout of 12 hours and 0 retries if it fails.
 
 ##### **Stored Procedure Logic**
 
-1. **Truncates** the **airbnb.BookingCustomerAggregation** table to remove outdated data.  
-2. **Aggregates** booking data from the **airbnb.bookings_fact** table by joining with the **airbnb.customer_dim** table. It calculates:  
+1. **Truncates** the **airbnb.booking_customer_aggregation_fact** table to remove outdated data.  
+2. **Aggregates** booking data from the **airbnb.bookings_dim** table by joining with the **airbnb.customer_dim** table. It calculates:  
    - `total_bookings`: The count of bookings per country.  
    - `total_amount`: The sum of booking amounts for each country.  
    - `last_booking_date`: The latest booking date per country.  
-3. **Inserts** the aggregated results back into the **airbnb.BookingCustomerAggregation** table.
+3. **Inserts** the aggregated results back into the **airbnb.booking_customer_aggregation_fact** table.
 
-You can find the SQL script for this stored procedure here:  
-[BookingAggregation.sql](./scripts/sql/stored_procedures/booking_aggregation.sql)
+The SQL script for the stored procedure can be found here:  
+[sp_aggregate_booking_data.sql.sql](./scripts/sql/stored_procedures/sp_aggregate_booking_data.sql)
+
+---
+
+**Booking_Dim_Fact_Transformation Pipeline Configuration File**
+
+You can find the JSON configuration file for this pipeline here:  
+[BookingDimFactTransformation.json](./pipelines/BookingDimFactTransformation.json)
+
+---
+
+## Outputs
+
+The following tables are created and populated in **Azure Synapse SQL Pool** as part of the ETL process:
+
+1. **Customer Dimension Table**:
+    - This table contains data related to customers, such as their demographics and history.
+
+    ![CustomerDimTable](./assets/images/customer_dim_table.png)
+    - You can access the output **CSV** for the **Customer Dimension Table** via the link below:
+      - [Customer Dimension Table CSV](./output/airbnb.customer_dim.csv)
+
+2. **Bookings Dimension Table**:
+    - This table contains the transformed booking data.
+
+    ![BookingsDimTable](./assets/images/bookings_dim_table.png)
+    - You can access the output **CSV** for the **Bookings Dimension Table** via the link below:
+      - [Bookings Dimension Table CSV](./output/airbnb.bookings_data.csv)
+
+3. **Booking Customer Aggregation Fact Table**:
+    - This table stores aggregated booking data and insights.
+
+    ![BookingCustomerAggregationFactTable](./assets/images/booking_customer_aggregation_fact_table.png)
+    - You can access the output **CSV** for the **Booking Customer Aggregation Fact Table** via the link below:
+      - [Booking Customer Aggregation Fact Table CSV](./output/airbnb.booking_customer_aggregation_fact.csv)
 
 ---
 
 ## **Conclusion**
 
-The **AirBnB CDC Ingestion Pipeline** is designed to process and transform both booking and customer data, ensuring that they are ingested and continuously updated in **Azure Synapse SQL Pool** for further analytics and reporting. 
-
-With this pipeline architecture, **AirBnB** can efficiently ingest and process data, keeping its data warehouse in sync with real-time changes.
+The **AirBnB CDC Ingestion Pipeline** pipeline offers a robust, automated solution for managing and processing large volumes of data related to AirBnB bookings. By leveraging Azure’s powerful services such as Data Factory, Synapse Analytics, and CosmosDB, the pipeline ensures data is processed efficiently, providing analytical and reporting insights into booking and customer behavior.
