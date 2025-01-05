@@ -36,7 +36,7 @@ Below is the architecture diagram showcasing how data flows through the differen
 ## Tech Stack
 
 - **Azure Data Factory (ADF)**: Orchestration of pipelines for data movement and transformations.
-- **Azure Data Lake Storage (ADLS)**: Storage for raw and intermediate data.
+- **Azure Data Lake Storage (ADLS)**: Storage for raw and archived data.
 - **Azure Synapse Analytics**: Data warehouse for analytical queries.
 - **Azure Cosmos DB for NoSQL**: Source of change data for booking events.
 - **Python**: Custom data generation scripts.
@@ -242,21 +242,21 @@ The following tables are created and populated in **Azure Synapse SQL Pool** as 
     - This table contains data related to customers, such as their demographics and history.
 
     ![CustomerDimTable](./assets/images/customer_dim_table.png)
-    - You can access the output **CSV** for the **Customer Dimension Table** via the link below:
+    - The output **CSV** for the **Customer Dimension Table** can be accessed via the link below:
       - [Customer Dimension Table CSV](./output/airbnb.customer_dim.csv)
 
 2. **Bookings Dimension Table**:
     - This table contains the transformed booking data.
 
     ![BookingsDimTable](./assets/images/bookings_dim_table.png)
-    - You can access the output **CSV** for the **Bookings Dimension Table** via the link below:
+    - The output **CSV** for the **Bookings Dimension Table** can be accessed via the link below:
       - [Bookings Dimension Table CSV](./output/airbnb.bookings_data.csv)
 
 3. **Booking Customer Aggregation Fact Table**:
     - This table stores aggregated booking data and insights.
 
     ![BookingCustomerAggregationFactTable](./assets/images/booking_customer_aggregation_fact_table.png)
-    - You can access the output **CSV** for the **Booking Customer Aggregation Fact Table** via the link below:
+    - The output **CSV** for the **Booking Customer Aggregation Fact Table** can be accessed via the link below:
       - [Booking Customer Aggregation Fact Table CSV](./output/airbnb.booking_customer_aggregation_fact.csv)
 
 ---
